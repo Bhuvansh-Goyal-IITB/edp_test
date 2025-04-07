@@ -1,5 +1,6 @@
 from PIL import Image
 import math
+from pathlib import Path
 
 
 class Glyph:
@@ -70,7 +71,11 @@ class BDF_Font:
                     i += 1
 
     def render_text(
-        self, img: Image.Image, text: str, margin: tuple[int, int] = (0, 0)
+        self,
+        img: Image.Image,
+        text: str,
+        margin: tuple[int, int] = (0, 0),
+        line_padding: int = 0,
     ):
         img_width, img_height = img.size
 
@@ -86,13 +91,14 @@ class BDF_Font:
                     if glyph is None:
                         continue
 
-                    width += glyph.x_advance + 1
+                    # +1
+                    width += glyph.x_advance
 
                 if x + width + margin[0] - 1 > img_width:
                     x = margin[0]
-                    y += self.ascent + self.descent
+                    y += self.ascent + self.descent + line_padding
 
-                if y + self.descent + margin[1] > img_height - 1:
+                if y + self.descent + margin[1] + line_padding > img_height - 1:
                     break
 
                 for char in word:
@@ -103,19 +109,22 @@ class BDF_Font:
                         continue
 
                     self.render_glyph(img, (x, y), glyph)
-                    x += glyph.x_advance + 1
+                    # +1
+                    x += glyph.x_advance
 
                 glyph = self.get_glyph(32)
                 if (glyph is not None) and not (
-                    x + glyph.x_advance + margin[0] > img_width
+                    # +1
+                    x + glyph.x_advance + margin[0] - 1 > img_width
                 ):
                     self.render_glyph(img, (x, y), glyph)
-                    x += glyph.x_advance + 1
+                    # +1
+                    x += glyph.x_advance
 
             x = margin[0]
-            y += self.ascent + self.descent
+            y += self.ascent + self.descent + line_padding
 
-            if y + self.descent + margin[1] > img_height - 1:
+            if y + self.descent + margin[1] + line_padding > img_height - 1:
                 break
 
     def render_glyph(
@@ -140,19 +149,18 @@ class BDF_Font:
                 return glyph
 
 
-font = BDF_Font("./garamond.bdf")
-TEXT = """The abandoned observatory perched on Blackridge Mountain had been closed since the 1963 solar eclipse, when three astronomers vanished mid-observation. Park rangers chalked it up to bears, but the equipment left behind told a different story—the telescopes were trained not on the sky, but on the valley below, and all the film canisters were filled with photographs of the same oak tree.
+TEXT = ""
+with open("./book.txt") as fp:
+    TEXT = fp.read()
 
-When geology student Mateo Rivera broke in to retrieve a rare mineral sample from the basement, he found the walls covered in equations that made his skin prickle. They weren't celestial calculations, but topographical vectors... as if someone had been trying to map something buried beneath the mountain. The most disturbing part? The chalkboards had been recently updated.
+min_codepoint = min(ord(char) for char in TEXT)
+max_codepoint = max(ord(char) for char in TEXT)
 
-His flashlight glinted off a metal hatch in the floor, its surface etched with warnings in six languages. The rusted bolt came loose with one firm twist. Cold air rushed up the ladder shaft, carrying a scent like wet pennies and ozone. His last rational thought was that no basement could possibly be this deep.
+print(min_codepoint, max_codepoint)
 
-The rangers found Mateo's backpack at the hatch entrance, its contents neatly arranged: compass spinning wildly, rock samples pulsing with bioluminescence, and his field notebook filled with sketches of a spiraling stone structure that couldn't exist at such depths. The final page held only a single phrase, written over and over in trembling script: "THEY'RE STILL DOWN THERE WATCHING THE TREE."
-
-The observatory was demolished in 2004, but hikers still report seeing flashes of light from the mountain at 3:17 AM—precisely when the missing astronomers' stopwatches had frozen. The oak tree thrives, though botanists note its growth rings don't match any known dendrochronological record. As for the hatch? Every attempt to pour concrete into it fails; by morning, the mixture is always bone dry and crumbles to dust at a touch.
-"""
-
-img = Image.new("1", (300, 400), 1)
-
-font.render_text(img, TEXT, (10, 20))
-img.save("output.png")
+folder = Path("/Users/bhuvansh/Desktop/edp_test")
+for bdf_file in folder.glob("*.bdf"):
+    font = BDF_Font(f"./{bdf_file.name}")
+    img = Image.new("1", (480, 648), 1)
+    font.render_text(img, TEXT[2000:], (10, 20))
+    img.save(f"{bdf_file.name}.png")
