@@ -1,5 +1,5 @@
 {
-  description = "python development flake";
+  description = "edp testing flake";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -10,9 +10,9 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-
         pythonEnv = pkgs.python312.withPackages (ps: with ps; [
           pillow
+          beautifulsoup4
         ]);
       in
       {
@@ -22,6 +22,8 @@
               pythonEnv
               ruff
               pyright
+              otf2bdf
+              time
             ];
           };
         };

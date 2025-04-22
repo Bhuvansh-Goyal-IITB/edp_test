@@ -1,3 +1,7 @@
 *.png
 .DS_Store
 .direnv
+*.png
+*.zip
+*.epub
+__pycache__
