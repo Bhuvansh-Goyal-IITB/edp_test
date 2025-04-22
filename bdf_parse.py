@@ -109,46 +109,33 @@ class BDF_Font:
 
                 word_buffer = ""
 
-        def badness(i, j):
-            width = 0
-            for k in range(i, j):
-                width += self.get_width(words[k])
-            width += (j - i - 1) * self.get_width(" ")
+        word_widths = [self.get_width(word) for word in words]
+        word_widths.append(0)
+        space_width = self.get_width(" ")
 
-            if width > page_width:
-                return page_width**3
-            else:
-                return (page_width - width) ** 3
+        dp = [float("inf") for _ in range(len(words) + 1)]
+        next_break = [0 for _ in range(len(words))]
 
-        dp_output = [0 for _ in range(len(words))]
-        dp_store = [-1 for _ in range(len(words) + 1)]
+        dp[len(words)] = 0
 
-        def dp(i):
-            if i == len(words):
-                dp_store[i] = 0
-                return 0
+        for i in range(len(words) - 1, -1, -1):
+            width = word_widths[i]
 
-            if dp_store[i] != -1:
-                return dp_store[i]
+            for j in range(i + 1, len(words) + 1):
+                cost = 0
+                line_width = width + ((j - i - 1) * space_width)
+                if line_width > page_width:
+                    cost = float("inf")
+                else:
+                    cost = (page_width - line_width) ** 3
 
-            min_arg = i + 1
+                cost += dp[j]
 
-            min_cost = 0
-            min_cost = dp(i + 1) + badness(i, i + 1)
+                width += word_widths[j]
 
-            for j in range(i + 2, len(words) + 1):
-                cost = dp(j) + badness(i, j)
-
-                if cost < min_cost:
-                    min_cost = cost
-                    min_arg = j
-
-            dp_output[i] = min_arg
-            dp_store[i] = min_cost
-
-            return min_cost
-
-        dp(0)
+                if cost < dp[i]:
+                    dp[i] = cost
+                    next_break[i] = j
 
         word_index = 0
         while True:
@@ -158,11 +145,11 @@ class BDF_Font:
             line_indices.append(
                 (
                     word_indices[word_index][0],
-                    word_indices[dp_output[word_index] - 1][1],
+                    word_indices[next_break[word_index] - 1][1],
                 )
             )
 
-            word_index = dp_output[word_index]
+            word_index = next_break[word_index]
 
         return line_indices
 
@@ -324,17 +311,16 @@ class BDF_Font:
 
             gap_sizes = []
 
-            if len(words) > 1:
+            if len(words) > 1 and text_justification == Text_Justification.FULL:
                 gap_sizes = [
                     (img.size[0] - (2 * margin[0]) - width) // (len(words) - 1)
                     for _ in range(len(words))
                 ]
 
-            gap_sizes_sum = sum(gap_sizes)
+                gap_sizes_sum = sum(gap_sizes)
 
-            remaining = img.size[0] - (2 * margin[0]) - width - gap_sizes_sum
+                remaining = img.size[0] - (2 * margin[0]) - width - gap_sizes_sum
 
-            if len(words) > 1:
                 add_at_front = True
                 for i in range(remaining):
                     if add_at_front:
@@ -344,8 +330,8 @@ class BDF_Font:
 
                     add_at_front = not add_at_front
 
-            if width < 0.6 * (img.size[0] - (2 * margin[0])):
-                gap_sizes = []
+                if width < 0.6 * (img.size[0] - (2 * margin[0])):
+                    gap_sizes = []
 
             for i, word in enumerate(words):
                 for char in word:
@@ -474,7 +460,7 @@ if __name__ == "__main__":
 
     TEXT = extract_epub_text("./catcher_in_the_rye.epub")
     TEXT = TEXT.split("\f")[2]
-    TEXT = TEXT.split("\n\n")[1]
+    TEXT = TEXT.split("\n")[1]
 
     img_size = (480, 648)
     margin = (20, 20)
@@ -482,7 +468,7 @@ if __name__ == "__main__":
     font = BDF_Font("font.bdf")
     img = Image.new("1", img_size, 1)
 
-    text_justification = Text_Justification.FULL
+    text_justification = Text_Justification.LEFT
 
     font.render_text_block(
         img, TEXT, margin, Line_Break_Algorithm.OPTIMAL, text_justification
