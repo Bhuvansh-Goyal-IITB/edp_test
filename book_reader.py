@@ -78,7 +78,7 @@ def render_page(
     img_size,
     margin,
     text_justification,
-    output_folder="book_render",
+    output_folder,
 ):
     img = Image.new("1", img_size, 1)
     font.render_line_indices(line_indices, img, text, margin, text_justification)
@@ -95,6 +95,7 @@ def render_page(
 def render_book(
     epub_path,
     font_path,
+    output_path,
     img_size=(480, 648),
     margin=(20, 20),
     line_break_algorithm=Line_Break_Algorithm.OPTIMAL,
@@ -154,6 +155,7 @@ def render_book(
                             img_size,
                             margin,
                             text_justification,
+                            output_path,
                         )
                         print(f"page number {page_number}")
                         page_line_indices = [line_index]
@@ -171,6 +173,7 @@ def render_book(
                         img_size,
                         margin,
                         text_justification,
+                        output_path,
                     )
                     print(f"page number {page_number}")
                     page_line_indices = []
@@ -187,6 +190,7 @@ def render_book(
                     img_size,
                     margin,
                     text_justification,
+                    output_path,
                 )
                 print(f"page number {page_number}")
                 page_line_indices = []
@@ -194,13 +198,29 @@ def render_book(
             text_block_buffer = ""
 
 
-epub_path = "./book.epub"
-font_path = "./font.bdf"
+if __name__ == "__main__":
+    epub_path = "anthropologist_on_mars.epub"
+    font_dir = "bdf_fonts"
 
-render_book(
-    epub_path,
-    font_path,
-    margin=(24, 24),
-    line_break_algorithm=Line_Break_Algorithm.OPTIMAL,
-    text_justification=Text_Justification.LEFT,
-)
+    output_folder = "book_render"
+
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+
+    os.makedirs(output_folder)
+
+    for filename in os.listdir(font_dir):
+        font_path = f"{font_dir}/{filename}"
+
+        font_name = filename.split(".")[0]
+        book_name = epub_path.split(".")[0]
+        book_output_path = f"{output_folder}/{book_name}_{font_name}"
+
+        render_book(
+            epub_path,
+            font_path,
+            book_output_path,
+            margin=(24, 24),
+            line_break_algorithm=Line_Break_Algorithm.OPTIMAL,
+            text_justification=Text_Justification.LEFT,
+        )

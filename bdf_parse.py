@@ -1,3 +1,5 @@
+import os
+import shutil
 from PIL import Image
 import math
 from enum import Enum, auto
@@ -44,27 +46,27 @@ class BDF_Font:
             i = 0
             while i < len(lines):
                 if "PIXEL_SIZE" in lines[i]:
-                    self.pixel_size = int(lines[i].split(" ")[1])
+                    self.pixel_size = int(lines[i].split()[1])
                     i += 1
                 elif "FONT_ASCENT" in lines[i]:
-                    self.ascent = int(lines[i].split(" ")[1])
+                    self.ascent = int(lines[i].split()[1])
                     i += 1
                 elif "FONT_DESCENT" in lines[i]:
-                    self.descent = int(lines[i].split(" ")[1])
+                    self.descent = int(lines[i].split()[1])
                     i += 1
                 elif "STARTCHAR" in lines[i]:
                     i += 1
-                    code_point = int(lines[i].split(" ")[1])
+                    code_point = int(lines[i].split()[1])
 
                     i += 2
-                    x_advance = int(lines[i].split(" ")[1])
+                    x_advance = int(lines[i].split()[1])
 
                     i += 1
                     bbox = (
-                        int(lines[i].split(" ")[1]),
-                        int(lines[i].split(" ")[2]),
-                        int(lines[i].split(" ")[3]),
-                        int(lines[i].split(" ")[4]),
+                        int(lines[i].split()[1]),
+                        int(lines[i].split()[2]),
+                        int(lines[i].split()[3]),
+                        int(lines[i].split()[4]),
                     )
 
                     i += 2
@@ -136,6 +138,9 @@ class BDF_Font:
                 if cost < dp[i]:
                     dp[i] = cost
                     next_break[i] = j
+
+            if math.isinf(dp[i]):
+                next_break[i] = i + 1
 
         word_index = 0
         while True:
@@ -458,20 +463,35 @@ class BDF_Font:
 if __name__ == "__main__":
     from html_parse import extract_epub_text
 
-    TEXT = extract_epub_text("./catcher_in_the_rye.epub")
-    TEXT = TEXT.split("\f")[2]
+    epub_path = "anthropologist_on_mars.epub"
+
+    TEXT = extract_epub_text(epub_path)
+    TEXT = TEXT.split("\f")[4]
     TEXT = TEXT.split("\n")[1]
 
     img_size = (480, 648)
     margin = (20, 20)
 
-    font = BDF_Font("font.bdf")
-    img = Image.new("1", img_size, 1)
+    output_folder = "font_test"
 
-    text_justification = Text_Justification.LEFT
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
 
-    font.render_text_block(
-        img, TEXT, margin, Line_Break_Algorithm.OPTIMAL, text_justification
-    )
+    os.makedirs(output_folder)
 
-    img.save("optimal.png")
+    font_folder = "bdf_fonts"
+
+    for filename in os.listdir(font_folder):
+        print(filename)
+        font = BDF_Font(f"{font_folder}/{filename}")
+        img = Image.new("1", img_size, 1)
+
+        text_justification = Text_Justification.LEFT
+        line_break_algorithm = Line_Break_Algorithm.OPTIMAL
+
+        font.render_text_block(
+            img, TEXT, margin, line_break_algorithm, text_justification
+        )
+
+        img_name = filename.split(".")[0]
+        img.save(f"{output_folder}/{img_name}.png")
